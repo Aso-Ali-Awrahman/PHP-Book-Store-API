@@ -1,0 +1,46 @@
+
+CREATE TABLE Users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(20) NOT NULL UNIQUE,
+    email VARCHAR(30) NOT NULL UNIQUE,
+    password VARCHAR(20) NOT NULL,
+    role VARCHAR(10) NOT NULL
+);
+
+CREATE TABLE Books (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    isbn VARCHAR(13) NOT NULL UNIQUE,
+    title VARCHAR(50) NOT NULL,
+    author VARCHAR(30) NOT NULL,
+    genre VARCHAR(15),
+    pages INT,
+    language VARCHAR(15),
+    publisher VARCHAR(50),
+    format VARCHAR(10) CHECK ( format IN ('Paper Back', 'Hard Cover') ),
+    price DOUBLE,
+    quantity INT,
+    year INT CHECK ( year BETWEEN 1900 AND 2100)
+);
+
+CREATE TABLE Transactions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    book_id INT,
+    price DOUBLE,
+    quantity INT,
+    sold_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (book_id) REFERENCES Books(id)
+);
+
+INSERT INTO Users (username, email, password, role)
+VALUES
+    ('Aso', 'aso@store.com', 'aso123', 'Cashier'),
+    ('Dyari', 'dyari@store.com', 'dyari123', 'Owner'),
+    ('Kodo', 'kodo@store.com', 'kodo123', 'Inventory Operator');
+
+INSERT INTO Books (isbn, title, author, genre, pages, language, publisher, format, price, quantity)
+VALUES
+    ('9780140449136', 'The Iliad', 'Homer', 'Epic', 704, 'Greek', 'Penguin Classics', 'Paperback', 12.99, 10),
+    ('9780679783275', 'To Kill a Mockingbird', 'Harper Lee', 'Fiction', 336, 'English', 'J.B. Lippincott & Co.', 'Paperback', 7.99, 15),
+    ('9780743273565', 'The Great Gatsby', 'F. Scott Fitzgerald', 'Fiction', 180, 'English', 'Scribner', 'Hardcover', 10.99, 8),
+    ('9780140449266', 'The Odyssey', 'Homer', 'Epic', 560, 'Greek', 'Penguin Classics', 'Paperback', 13.50, 12),
+    ('9780553380163', '1984', 'George Orwell', 'Dystopian', 328, 'English', 'Secker & Warburg', 'Paperback', 9.99, 20);
