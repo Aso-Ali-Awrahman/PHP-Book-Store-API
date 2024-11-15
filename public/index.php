@@ -55,7 +55,7 @@ $app->get('/books-by-author/{author}', function (Request $request, Response $res
 
 $app->post('/add-book', function (Request $request, Response $response, array $args) {
 
-    $body = json_encode($request->getBody());
+    $body = json_decode($request->getBody());
     $isbn = $body['isbn'];
     $title = $body['title'];
     $author = $body['author'];
@@ -68,22 +68,22 @@ $app->post('/add-book', function (Request $request, Response $response, array $a
     $price = $body['price'];
     $year = $body['year'];
 
-    if (checkISBN($isbn)) {
-        $response->withBody(json_encode(["error" => "ISBN already exists!"]));
+    if (!checkISBN($isbn)) {
+        $response->getBody()->write(json_encode(["error" => "ISBN already exists!"]));
         return $response->withStatus(400)->withHeader('Content-Type', 'application/json');
     }
     elseif ($price < 0.0) {
-        $response->withBody(json_encode(["error" => "Price cannot be less than zero!"]));
+        $response->getBody()->write(json_encode(["error" => "Price cannot be less than zero!"]));
         return $response->withStatus(400)->withHeader('Content-Type', 'application/json');
     }
     elseif ($quantity < 1) {
-        $response->withBody(json_encode(["error" => "Quantity cannot be less than 1!"]));
+        $response->getBody()->write(json_encode(["error" => "Quantity cannot be less than 1!"]));
         return $response->withStatus(400)->withHeader('Content-Type', 'application/json');
     }
 
     $db = getConnection();
-    $stmt = $db->prepare("INSERT INTO books (isbn, title, author, genre, pages, language, publisher, format, price, quantity)
-                                VALUES ('$isbn', '$title', '$author', '$genre', $pages, '$language', '$publisher', '$format', $price, $quantity)");
+    $stmt = $db->prepare("INSERT INTO books (isbn, title, author, genre, pages, language, publisher, format, price, quantity, year)
+                                VALUES ('$isbn', '$title', '$author', '$genre', $pages, '$language', '$publisher', '$format', $price, $quantity, $year)");
 
     if ($stmt->execute()) {
         $response->getBody()->write(json_encode(["success" => "Book added!"]));
@@ -95,17 +95,62 @@ $app->post('/add-book', function (Request $request, Response $response, array $a
 
 });
 
+$app->post('/transaction/{isbn}', function (Request $request, Response $response, array $args) {
+
+    $body  = json_decode($request->getBody());
+    $price = $body->price;
+    $quantity = $body->quantity;
+    $isbn = $args['isbn'];
+
+    if ($quantity < 1 || $price < 0.0) {
+        $response->getBody()->write(json_encode(["error" => "Quantity or Price cannot be less than 1!"]));
+        return $response->withStatus(400)->withHeader('Content-Type', 'application/json');
+    }
+    $db = getConnection();
+    if (checkISBN($isbn)) {
+        $response->getBody()->write(json_encode(["error" => "Book does not exists!"]));
+        return $response->withStatus(404)->withHeader('Content-Type', 'application/json');
+    }
+    if (checkBookQuantity($isbn, $quantity, $db)) {
+        $response->getBody()->write(json_encode(["error" => "Quantity exceeded! for that book"]));
+        return $response->withStatus(400)->withHeader('Content-Type', 'application/json');
+    }
+
+
+    $stmt = $db->prepare("INSERT INTO transactions (book_id, price, quantity)
+                                VALUE ($isbn, $price, $quantity)");
+
+    if ($stmt->execute()) {
+        $updateBook = $db->prepare("UPDATE books SET quantity = quantity - $quantity WHERE isbn = $isbn");
+        $updateBook->execute();
+        $response->getBody()->write(json_encode(["success" => "Transaction Successful!"]));
+        return $response->withStatus(200)->withHeader('Content-Type', 'application/json');
+    }
+
+
+    $response->getBody()->write(json_encode($body));
+    return $response->withStatus(200)->withHeader('Content-Type', 'application/json');
+});
 
 $app->run();
 
 
-function checkISBN(string $isbn): bool
+function checkISBN(int $isbn): bool
 {
     $db = getConnection();
-    $book = $db->query("SELECT * FROM books WHERE isbn = '$isbn'")->fetch(PDO::FETCH_OBJ);
+    $book = $db->query("SELECT * FROM books WHERE isbn = $isbn")->fetch(PDO::FETCH_OBJ);
     if ($book)
+        return false;
+    return true;
+}
+
+function checkBookQuantity(int $isbn, int $quantity, PDO $db): bool
+{
+    $book = $db->query("SELECT * FROM books WHERE isbn = $isbn")->fetch(PDO::FETCH_OBJ);
+    if ($book->quantity < $quantity)
         return true;
     return false;
+
 }
 
 function getConnection(): PDO

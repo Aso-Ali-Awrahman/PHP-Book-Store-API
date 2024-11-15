@@ -7,6 +7,7 @@ erDiagram
 		string email
 		string password
 		string role
+		string api_key
 	}
 	
 	Books { 
