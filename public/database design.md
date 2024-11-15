@@ -11,7 +11,6 @@ erDiagram
 	}
 	
 	Books { 
-	int id PK
 	string isbn UK
 	string title 
 	string author  

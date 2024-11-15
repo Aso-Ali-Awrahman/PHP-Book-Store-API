@@ -29,6 +29,17 @@ $app->get('/books', function (Request $request, Response $response, array $args)
     return $response->withStatus(200)->withHeader('Content-Type', 'application/json');
 });
 
+$app->get("/book/{isbn}", function (Request $request, Response $response, array $args) {
+    $isbn = $args['isbn'];
+    $db = getConnection();
+    $book = $db->query('SELECT * FROM books WHERE isbn = $isbn')->fetch(PDO::FETCH_OBJ);
+    if (!$book) {
+        return $response->withStatus(404)->withHeader('Content-Type', 'application/json');
+    }
+    $response->getBody()->write(json_encode($book));
+    return $response->withStatus(200)->withHeader('Content-Type', 'application/json');
+});
+
 $app->get('/books-by-title/{title}', function (Request $request, Response $response, array $args) {
 
     $title = $args['title'];
@@ -56,17 +67,18 @@ $app->get('/books-by-author/{author}', function (Request $request, Response $res
 $app->post('/add-book', function (Request $request, Response $response, array $args) {
 
     $body = json_decode($request->getBody());
-    $isbn = $body['isbn'];
-    $title = $body['title'];
-    $author = $body['author'];
-    $genre = $body['genre'];
-    $pages = $body['pages'];
-    $language = $body['language'];
-    $publisher = $body['publisher'];
-    $format = $body['format'];
-    $quantity = $body['quantity'];
-    $price = $body['price'];
-    $year = $body['year'];
+    $isbn = $body->isbn;
+    $title = $body->title;
+    $author = $body->author;
+    $genre = $body->genre;
+    $pages = $body->pages;
+    $language = $body->language;
+    $publisher = $body->publisher;
+    $format = $body->format;
+    $quantity = $body->quantity;
+    $price = $body->price;
+    $year = $body->year;
+
 
     if (!checkISBN($isbn)) {
         $response->getBody()->write(json_encode(["error" => "ISBN already exists!"]));
@@ -93,6 +105,35 @@ $app->post('/add-book', function (Request $request, Response $response, array $a
     $response->getBody()->write(json_encode(["error" => "Book not added!"]));
     return $response->withStatus(400)->withHeader('Content-Type', 'application/json');
 
+});
+
+$app->put("update-book/{isbn}", function (Request $request, Response $response, array $args) {
+    $body = json_decode($request->getBody());
+    $isbn = $args['isbn'];
+    $title = $body->title;
+    $author = $body->author;
+    $genre = $body->genre;
+    $pages = $body->pages;
+    $language = $body->language;
+    $publisher = $body->publisher;
+    $format = $body->format;
+    $quantity = $body->quantity;
+    $price = $body->price;
+    $year = $body->year;
+
+    $db = getConnection();
+    $query = "UPDATE books SET title = '$title', author = '$author', genre = '$genre', pages = $pages, 
+                 language = '$language', publisher = '$publisher', format = '$format', quantity = $quantity, 
+                 price = $price, year = $year
+             WHERE isbn = $isbn";
+    $stmt = $db->prepare($query);
+
+    if (!$stmt->execute() && $stmt->rowCount() === 0) {
+        $response->getBody()->write(json_encode(["error" => "Book not updated! wrong ISBN number"]));
+        return $response->withStatus(400)->withHeader('Content-Type', 'application/json');
+    }
+    $response->getBody()->write(json_encode(["success" => "Book updated!"]));
+    return $response->withStatus(200)->withHeader('Content-Type', 'application/json');
 });
 
 $app->post('/transaction/{isbn}', function (Request $request, Response $response, array $args) {
@@ -124,7 +165,7 @@ $app->post('/transaction/{isbn}', function (Request $request, Response $response
         $updateBook = $db->prepare("UPDATE books SET quantity = quantity - $quantity WHERE isbn = $isbn");
         $updateBook->execute();
         $response->getBody()->write(json_encode(["success" => "Transaction Successful!"]));
-        return $response->withStatus(200)->withHeader('Content-Type', 'application/json');
+        return $response->withStatus(201)->withHeader('Content-Type', 'application/json');
     }
 
 
