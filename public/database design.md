@@ -1,15 +1,6 @@
 ```mermaid
 erDiagram
-	
-	Users {
-		int id PK
-		string username
-		string email
-		string password
-		string role
-		string api_key
-	}
-	
+    
 	Books { 
 	string isbn UK
 	string title 

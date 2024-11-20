@@ -95,7 +95,7 @@ $app->post('/add-book', function (Request $request, Response $response, array $a
 
     $db = getConnection();
     $stmt = $db->prepare("INSERT INTO books (isbn, title, author, genre, pages, language, publisher, format, price, quantity, year)
-                                VALUES ('$isbn', '$title', '$author', '$genre', $pages, '$language', '$publisher', '$format', $price, $quantity, $year)");
+                                VALUES ($isbn, '$title', '$author', '$genre', $pages, '$language', '$publisher', '$format', $price, $quantity, $year)");
 
     if ($stmt->execute()) {
         $response->getBody()->write(json_encode(["success" => "Book added!"]));
@@ -136,6 +136,22 @@ $app->put("update-book/{isbn}", function (Request $request, Response $response, 
     return $response->withStatus(200)->withHeader('Content-Type', 'application/json');
 });
 
+$app->patch("update-book/{isbn}", function (Request $request, Response $response, array $args) {
+    $body = json_decode($request->getBody());
+    $quantity = $body->quantity;
+    $isbn = $args['isbn'];
+
+    $db = getConnection();
+    $stmt = $db->prepare("UPDATE books SET quantity = $quantity WHERE isbn = $isbn");
+    if (!$stmt->execute() && $stmt->rowCount() === 0) {
+        $response->getBody()->write(json_encode(["error" => "Book not found!"]));
+        return $response->withStatus(404)->withHeader('Content-Type', 'application/json');
+    }
+    $response->getBody()->write(json_encode(["success" => "Book's quantity updated!"]));
+    return $response->withStatus(200)->withHeader('Content-Type', 'application/json');
+
+});
+
 $app->post('/transaction/{isbn}', function (Request $request, Response $response, array $args) {
 
     $body  = json_decode($request->getBody());
@@ -157,7 +173,6 @@ $app->post('/transaction/{isbn}', function (Request $request, Response $response
         return $response->withStatus(400)->withHeader('Content-Type', 'application/json');
     }
 
-
     $stmt = $db->prepare("INSERT INTO transactions (book_id, price, quantity)
                                 VALUE ($isbn, $price, $quantity)");
 
@@ -169,7 +184,17 @@ $app->post('/transaction/{isbn}', function (Request $request, Response $response
     }
 
 
-    $response->getBody()->write(json_encode($body));
+    $response->getBody()->write(json_encode(["error" => "Transaction failed!"]));
+    return $response->withStatus(400)->withHeader('Content-Type', 'application/json');
+});
+
+$app->get('/transactions', function (Request $request, Response $response, array $args) {
+    $db = getConnection();
+    $transactions = $db->query("SELECT isbn, title, t.price, t.quantity, t.sold_date FROM transactions AS t
+                                LEFT JOIN books AS b ON t.book_id = b.isbn
+                                ORDER BY t.sold_date DESC")->fetchAll(PDO::FETCH_OBJ);
+
+    $response->getBody()->write(json_encode($transactions));
     return $response->withStatus(200)->withHeader('Content-Type', 'application/json');
 });
 
