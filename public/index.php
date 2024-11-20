@@ -107,7 +107,7 @@ $app->post('/add-book', function (Request $request, Response $response, array $a
 
 });
 
-$app->put("update-book/{isbn}", function (Request $request, Response $response, array $args) {
+$app->put("/update-book/{isbn}", function (Request $request, Response $response, array $args) {
     $body = json_decode($request->getBody());
     $isbn = $args['isbn'];
     $title = $body->title;
@@ -136,7 +136,7 @@ $app->put("update-book/{isbn}", function (Request $request, Response $response, 
     return $response->withStatus(200)->withHeader('Content-Type', 'application/json');
 });
 
-$app->patch("update-book/{isbn}", function (Request $request, Response $response, array $args) {
+$app->patch("/update-book-quantity/{isbn}", function (Request $request, Response $response, array $args) {
     $body = json_decode($request->getBody());
     $quantity = $body->quantity;
     $isbn = $args['isbn'];
@@ -149,6 +149,7 @@ $app->patch("update-book/{isbn}", function (Request $request, Response $response
     }
     $response->getBody()->write(json_encode(["success" => "Book's quantity updated!"]));
     return $response->withStatus(200)->withHeader('Content-Type', 'application/json');
+
 
 });
 
@@ -197,6 +198,7 @@ $app->get('/transactions', function (Request $request, Response $response, array
     $response->getBody()->write(json_encode($transactions));
     return $response->withStatus(200)->withHeader('Content-Type', 'application/json');
 });
+
 
 $app->run();
 
